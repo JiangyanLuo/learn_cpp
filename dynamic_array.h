@@ -13,7 +13,7 @@ class Dynamic_array {
     T* data;
 public:
 
-    Dynamic_array(int initial_capacity = 0): len(0), capacity(initial_capacity) {
+    Dynamic_array(int initial_capacity): len(0), capacity(initial_capacity) {
         if(initial_capacity < 1) {
             data = nullptr;
         } else {
@@ -21,6 +21,43 @@ public:
             data = new T[initial_capacity];
         }
     };
+
+    template<typename...Args>
+    Dynamic_array(Args&&...args) : Dynamic_array((int)sizeof...(Args)) {
+        (emplace(std::forward<Args>(args)), ...);
+    }
+
+    Dynamic_array(const Dynamic_array& other) {
+        len = other.len;
+        capacity = other.capacity;
+        if(capacity) {
+            data = new T[capacity];
+            for(int i = 0; i < len; i++) {
+                data[i] = other.data[i];
+            }
+        }
+    }
+
+    Dynamic_array& operator = (const Dynamic_array& other) {
+        len = other.len;
+        capacity = other.capacity;
+        if(capacity) {
+            data = new T[capacity];
+            for(int i = 0; i < len; i++) {
+                data[i] = other.data[i];
+            }
+        }
+        return *this;
+    }
+
+    Dynamic_array(Dynamic_array&& other) {
+        if(this != &other) {
+            len = other.len;
+            capacity = other.capacity;
+            data = other.data;
+            other.data = nullptr;
+        }
+    }
 
     ~Dynamic_array(){
         // if(data != nullptr) {
@@ -118,6 +155,14 @@ public:
         return data[index];
     }
 
+    T* begin() const {
+        return data;
+    }
+
+    T* end() const {
+        return data+len;
+    }
+
     void print() {
         if(len < 1) {
             cout << "empty array.";
@@ -129,6 +174,14 @@ public:
         cout << '\n';
 
     }
+
+    T& operator [] (int index) {
+        
+        return data[index];
+        
+    }
+
+    
 
 };
 

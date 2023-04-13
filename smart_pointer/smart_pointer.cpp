@@ -1,6 +1,6 @@
 #include <iostream>
 #include <memory>
-#include <vector>
+#include "../dynamic_array.h"
 
 struct House;
 
@@ -13,7 +13,7 @@ struct Person {
 
 struct House {
     std::string address_;
-    std::vector<std::shared_ptr<Person>> persons;
+    Dynamic_array<std::shared_ptr<Person>> persons;
     House(const char* address):address_{address}{}
 };
 
@@ -41,14 +41,16 @@ int main() {
             std::make_shared<Person>("bowser", myHouse),
         };
         
+        // for(auto __it = myHouse->persons.begin(); __it != myHouse->persons.end(); __it++){
+        //     auto& p = *it;
         for(auto p : myHouse->persons){
-
             auto house = p->house_.lock(); // get a new shared pointer back from the weak pointer
             if(house){ // lock() may return a null pointer(the original data may have been destryed)
                 std::cout << p->name_ << ":" << house->address_<< "\n";
             }
-            
         }
+
+        std::cout << myHouse->persons[1]->name_ << "\n";
     }
 
     std::cout << "finished" << "\n";
