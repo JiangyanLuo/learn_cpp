@@ -1,6 +1,6 @@
 #include <iostream>
 #include <mutex>
-#include <shared_mutex>
+#include <mutex>
 #include <atomic>
 #include <cassert>
 
@@ -70,7 +70,8 @@ std::thread td1;
 bool active {true};
 int counter {0};
 
-std::shared_mutex mu;
+std::mutex muA;
+std::mutex muB;
 
 struct Numbers {
     int a {};
@@ -81,14 +82,14 @@ struct Numbers {
     Numbers() = default;
 
     Numbers(const Numbers& other) {
-        std::shared_lock<std::shared_mutex> lkg{mu};
+        std::scoped_lock lkg{muA, muB};
         a = other.a;
         b = other.b;
         c = other.c;      
     }
 
     // void dd() {
-    //     LockGuard<RecursiveMutex> lkg{mu};
+    //     LockGuard<RecursiveMutex> lkg{muA};
     //     d = c * 2;
     // }
 
@@ -96,7 +97,7 @@ struct Numbers {
 
 void producer(){
     while(active){
-        std::unique_lock<std::shared_mutex> lockgd{mu};
+        std::scoped_lock lockgd2{muB, muA};
         numbers.a++;
         numbers.b = numbers.a + 1;
         numbers.c = numbers.b + 1;
