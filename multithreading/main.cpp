@@ -2,7 +2,9 @@
 #include <mutex>
 #include <mutex>
 #include <atomic>
+#include <condition_variable>
 #include <cassert>
+#include <stack>
 
 #include <thread>
 #include <chrono>
@@ -65,74 +67,48 @@
 // };
 
 #define SLEEP(ms) std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-std::thread td1;
 
 bool active {true};
-int counter {0};
 
-std::mutex muA;
-std::mutex muB;
+struct Pancake {};
+std::stack<Pancake> pancakes;
 
-struct Numbers {
-    int a {};
-    int b {};
-    int c {};
-    int d {};
+std::mutex mu;
+std::condition_variable cv;
 
-    Numbers() = default;
-
-    Numbers(const Numbers& other) {
-        std::scoped_lock lkg{muA, muB};
-        a = other.a;
-        b = other.b;
-        c = other.c;      
-    }
-
-    // void dd() {
-    //     LockGuard<RecursiveMutex> lkg{muA};
-    //     d = c * 2;
-    // }
-
-} numbers;
-
-void producer(){
+void producer(std::string name){
     while(active){
-        std::scoped_lock lockgd2{muB, muA};
-        numbers.a++;
-        numbers.b = numbers.a + 1;
-        numbers.c = numbers.b + 1;
-        // numbers.dd();
+        SLEEP(100) // make a pancake
+        std::unique_lock lockgd{mu};
+        std::cout << name << " made a pancake" << std::endl;
+        pancakes.emplace(); // add the pancake on top of the plate
+        cv.notify_one();
     }
-
+    cv.notify_all();
 }
 
-void consumer() {
+void consumer(std::string name) {
     while(active){
-        auto othernumbers = numbers;
-        if(othernumbers.b != othernumbers.a + 1 || othernumbers.c != othernumbers.b + 1) {
-            counter ++;
-            std::cout << "OOPS\n" << std::flush;
+        std::unique_lock lkg{mu};
+        cv.wait_for(lkg, std::chrono::milliseconds(10), []() { return !pancakes.empty() || !active; });
+        if (!pancakes.empty()) {
+            pancakes.pop(); // take from the plate
+            lkg.unlock();
+            std::cout << name << " is eating a pancake" << std::endl;
+            SLEEP(10) // eating
         }
     }
 }
 
-void func(){
-    std::cout << "first or second?\n" << std::flush;
-    SLEEP(2000)
-    std::cout << "this will print after 2 seconds\n" << std::flush;
-}
-
 int main() {
-    td1 = std::thread{producer};
-    std::thread td2 {consumer};
-    std::thread td3 {consumer};
-    SLEEP(2000)
+    std::thread td1 {producer, "Popo"};
+    std::thread td2 {consumer, "Popotte"};
+    std::thread td3 {consumer, "Bowser"};
+    SLEEP(5000)
 
     active = false;
 
     if(td1.joinable()) td1.join();
     if(td2.joinable()) td2.join();
     if(td3.joinable()) td3.join();
-
-    std::cout << counter << '\n';
 }
